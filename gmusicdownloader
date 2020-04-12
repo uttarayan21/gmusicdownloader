@@ -4,7 +4,7 @@ file=$1
 outfolder=$2
 echo $file
 script=$(basename "$0")
-
+outfd=/dev/null
 
 if ! test -f $file
   then echo "Usage : $script [file] [folder]"
@@ -21,7 +21,7 @@ fi
 
 
 IFS=$'\n'
-for song in $(cat $file | grep '^#EXTINF' | awk -F, '{print $2}')
+for song in $(cat $file | grep '^#EXTINF' | cut -d, -f2-)
   do echo "Downloading $song"
   search_song=$(echo $song | sed 's/\\/\\\\/g')
   link=$(grep $search_song $file -A1 | tail -1)
@@ -43,16 +43,14 @@ for song in $(cat $file | grep '^#EXTINF' | awk -F, '{print $2}')
   if ! test $album
     then album='.'
   fi
-  echo Link $link
-  echo Outfile $outfile
-  echo Artist $artist
-  echo Album $album
-  echo Title $title 
-  echo "\n\n"
+  echo Link $link > $outfd
+  echo Outfile $outfile > $outfd
+  echo Artist $artist > $outfd
+  echo Album $album > $outfd
+  echo Title $title > $outfd
   if ! test -f "$outfolder/$artist/$album/$outfile"
-    then curl -o "$outfolder/$artist/$album/$outfile" $link
+    then curl -so "$outfolder/$artist/$album/$outfile" $link
   else
     echo "Already exists"
   fi
-
 done
