@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+file=$1
+outfolder=$2
+echo $file
+script=$(basename "$0")
+
+
+if ! test -f $file
+  then echo "Usage : $script [file] [folder]"
+  echo "[file] should be a m3u file"
+  echo "[folder] should be the folder to download to (otional)"
+  exit 0
+fi
+
+if ! test -w $outfolder || ! test $outfolder
+  then echo "Outfolder not specified or non writable using current directory"
+  outfolder='.'
+fi
+
+
+
+IFS=$'\n'
+for song in $(cat $file | grep '^#EXTINF' | awk -F, '{print $2}')
+  do echo "Downloading $song"
+  search_song=$(echo $song | sed 's/\\/\\\\/g')
+  link=$(grep $search_song $file -A1 | tail -1)
+  title=$(echo "$song" | awk -F ' - ' '{$1=$NF="";print $0}' | tr -d '\\\/'| awk '{$1=$1;print}')
+  if ! test title
+    then title=$(echo $song | awk -F ' - ' '{$1="";print $0}' | tr -d '\\\/'| awk '{$1=$1;print}')
+  else
+    album=$(echo $song | awk -F '-' '{print $NF}' | tr -d '\\\/'| awk '{$1=$1;print}') 
+  fi
+  outfile=$(echo "$title" | tr -d '\\\/' | awk '{$1=$1;print}').mpeg
+  artist=$(echo $song | awk -F ' - ' '{print $1}' | tr -d '\\\/'| awk '{$1=$1;print}')
+  if ! test -d "$outfolder/$artist"; then
+    echo "Creating $artist"
+    mkdir "$outfolder/$artist"
+  fi
+  if test $album && ! test -d "$outfolder/$artist/$album"
+    then mkdir "$outfolder/$artist/$album"
+  fi  
+  if ! test $album
+    then album='.'
+  fi
+  echo Link $link
+  echo Outfile $outfile
+  echo Artist $artist
+  echo Album $album
+  echo Title $title 
+  echo "\n\n"
+  if ! test -f "$outfolder/$artist/$album/$outfile"
+    then curl -o "$outfolder/$artist/$album/$outfile" $link
+  else
+    echo "Already exists"
+  fi
+
+done
